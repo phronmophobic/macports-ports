@@ -6,13 +6,12 @@ PortGroup           cmake 1.1
 PortGroup           github 1.0
 
 PortGroup           boost 1.0
+
 boost.depends_type  build
 boost.version       1.88
 
 name                jank
-
 categories          lang
-platforms           darwin
 maintainers         @phronmophobic \
                     @jeaye
 
@@ -35,7 +34,6 @@ post-fetch {
 }
 
 depends_build-append \
-                    port:ninja \
                     port:git-lfs
 
 depends_lib-append  \
