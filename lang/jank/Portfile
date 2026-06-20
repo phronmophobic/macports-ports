@@ -1,0 +1,78 @@
+# -*- coding: utf-8; mode: tcl; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- vim:fenc=utf-8:ft=tcl:et:sw=4:ts=4:sts=4
+
+
+PortSystem          1.0
+PortGroup           cmake 1.1
+PortGroup           github 1.0
+
+PortGroup           boost 1.0
+boost.depends_type  build
+boost.version       1.88
+
+name                jank
+
+categories          lang
+platforms           darwin
+maintainers         @phronmophobic \
+                    @jeaye
+
+description         The native Clojure dialect hosted on LLVM with seamless C++ interop.
+long_description    ${description}
+homepage            https://jank-lang.org
+
+license             MPL-2
+
+set llvm_version    22
+set llvm_dir        ${prefix}/libexec/llvm-${llvm_version}
+
+github.setup        jank-lang jank main
+version             0.1
+checksums           none
+
+fetch.type          git
+post-fetch {
+    system -W ${worksrcpath} "git submodule update --init"
+}
+
+depends_build-append \
+                    port:ninja \
+                    port:git-lfs
+
+depends_lib-append  \
+                    port:libzip \
+                    port:openssl \
+                    port:zlib \
+                    port:llvm-${llvm_version} \
+                    port:clang-${llvm_version}
+
+compiler.whitelist  clang-${llvm_version}
+
+cmake.generator     "Ninja"
+cmake.source_dir    ${worksrcpath}/compiler+runtime
+cmake.build_dir     ${worksrcpath}/compiler+runtime/build
+
+configure.args      -DCMAKE_INSTALL_PREFIX=${prefix} \
+                    -DLLVM_DIR=${llvm_dir}/lib/cmake/llvm/ \
+                    -DClang_DIR=${llvm_dir}/lib/cmake/clang/ \
+                    -DBoost_DIR=[boost::install_area]/lib/cmake/Boost-${boost.version}.0/ \
+                    -DCMAKE_BUILD_TYPE=Release
+
+
+configure.compiler  macports-clang-${llvm_version}
+
+pre-configure {
+
+    set llvm_config ${prefix}/bin/llvm-config-22
+    if {[file exists ${llvm_config}]} {
+        set llvm_bin [exec ${llvm_config} --bindir]
+        set llvm_lib [exec ${llvm_config} --libdir]
+        build.env-append PATH=${llvm_bin}:$env(PATH)
+        build.env-append LDFLAGS="-Wl,-rpath,${llvm_lib} $env(LDFLAGS)"
+    }
+}
+
+test.run            yes
+test.dir            ${worksrcpath}/compiler+runtime
+test.cmd            ${destroot}${prefix}/bin/jank
+test.args           check-health
+test.target         test
